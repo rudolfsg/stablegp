@@ -4,9 +4,13 @@ This library implements a robust version of Sparse Variational Gaussian Process 
 
 The model tries to approximate the function $f(x)$ based on noisy observations $y = f(x) + \epsilon$ where $\epsilon$ is Gaussian noise. 
 
-[](example.png)
+![](example.png)
 
 ## Example
+
+```
+pip install stablegp
+```
 
 ```python
 import torch
@@ -39,6 +43,8 @@ This library aims to make SGPR easy by providing a stable implementation that ha
 3. **Precision**: PyTorch uses float32 by default but GPs work best with float64 which can be enabled by adding `torch.set_default_dtype(torch.float64)` at the start of your script or by casting individual tensors, e.g. `X_train = X_train.to(torch.float64)`. Using float32 may lead to numerical instabilities and worse performance, however, float32 is still worth a try due to halved memory usage and because modern GPUs are much faster with float32 than float64. 
 
 4. **Training**: we suggest using the training loop provided in `SGPR.fit()` since it has been tested and known to work well.
+
+5. **Limitations**: currently we only support regression with a Gaussian likelihood and the squared exponential kernel. 
 
 ## Technical details
 
