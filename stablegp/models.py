@@ -37,13 +37,16 @@ class PositiveVariable(_Variable):
 class SEKernel(torch.nn.Module):
     def __init__(
         self,
-        D,
-        lengthscale_lower=default_positive_minimum,
-        signal_var_lower=default_positive_minimum,
+        num_dimensions: int,
+        lengthscale_lower: float = default_positive_minimum,
+        signal_var_lower: float = default_positive_minimum,
     ):
+        """
+        Squared exponential kernel with one lengthscale per dimension (ARD) and lower bounds on parameters to ensure positivity.
+        """
         super().__init__()
         self.raw_signal_var = PositiveVariable(1, lower=signal_var_lower)
-        self.raw_lengthscale = PositiveVariable(torch.ones(D), lower=lengthscale_lower)
+        self.raw_lengthscale = PositiveVariable(torch.ones(num_dimensions), lower=lengthscale_lower)
 
         self.register_parameter("signal_var_param", self.raw_signal_var.param)
         self.register_parameter("lengthscale_param", self.raw_lengthscale.param)
@@ -80,13 +83,13 @@ class SEKernel(torch.nn.Module):
 class SGPR(torch.nn.Module):
     def __init__(
         self,
-        X,
-        Y,
-        kernel,
-        num_inducing=10,
-        jitter=default_jitter,
-        max_jitter_attempts=10,
-        noise_var_lower=default_positive_minimum
+        X: torch.tensor,
+        Y: torch.tensor,
+        kernel: SEKernel,
+        num_inducing: int = 10,
+        jitter: float = default_jitter,
+        max_jitter_attempts: int = 10,
+        noise_var_lower: float = default_positive_minimum
     ):
         super().__init__()
 

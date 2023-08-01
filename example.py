@@ -34,7 +34,7 @@ def plot(model, title):
     plt.title(title)
 
 
-kernel = SEKernel(D=X.shape[1])
+kernel = SEKernel(num_dimensions=X.shape[1])
 model = SGPR(
     X,
     Y,
