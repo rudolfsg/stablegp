@@ -10,7 +10,7 @@ torch.set_default_dtype(torch.float64)
 # Generate dataset
 N = 500
 
-X = torch.linspace(0, 15, N).reshape(-1, 1)
+X = torch.linspace(10, 25, N).reshape(-1, 1)
 Y_noiseless = torch.sin(X)
 Y = Y_noiseless + 0.5 * torch.randn(N).reshape(-1, 1)
 

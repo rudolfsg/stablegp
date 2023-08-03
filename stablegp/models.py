@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from torch.linalg import solve_triangular
 import torch
 from stablegp.optimizer import LBFGS
-
+import time 
 
 default_jitter = 1e-10
 default_positive_minimum = 1e-5
@@ -278,6 +278,7 @@ class SGPR(torch.nn.Module):
         return density
 
     def fit(self, max_epochs=20, optimise_iv=True, reinit_retries=5):
+        start_time = time.time()
         optimizer = LBFGS(
             [v for v in self.parameters() if v.requires_grad],
             line_search_fn="strong_wolfe",
@@ -348,7 +349,7 @@ class SGPR(torch.nn.Module):
 
             if epoch == max_epochs - 1:
                 print("Terminating due to max_epochs")
-
+        print(f"Optimization finished in {(time.time() - start_time):.1f}s")
 
 @torch.no_grad()
 def greedy_selection(training_inputs, M, kernel: SEKernel):
