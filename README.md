@@ -1,6 +1,6 @@
 # StableGP
 
-This library implements a robust version of Sparse Variational Gaussian Process regression in PyTorch.
+This library implements a robust version of Sparse Variational Gaussian Process regression (SGPR) in PyTorch.
 
 ![](example.png)
 
@@ -26,9 +26,9 @@ pred_mean, pred_var = model.predict_f(X)
 
 ## Background
 
-Gaussian process regression (GPR) is a model that tries to approximate the function $f(x)$ based on noisy observations $y = f(x) + \epsilon$ where $\epsilon$ is Gaussian noise. It is a powerful model since (1) it provides uncertainty estimates of each prediction (2) it's non-parametric and can fit many datasets well. However, for $N$ training observations a GP requires $\mathcal{O}(N^2)$ memory and $\mathcal{O}(N^3)$ computational complexity.
+Gaussian process regression (GPR) is a model that tries to predict the function $f(x)$ based on noisy observations $y = f(x) + \epsilon$ where $\epsilon$ is Gaussian noise. It is a powerful model since (1) it provides uncertainty estimates of each prediction (2) it's non-parametric and can fit many datasets well. However, for $N$ training observations a GP requires $\mathcal{O}(N^2)$ memory and $\mathcal{O}(N^3)$ computational complexity.
 
-Sparse Gaussian process regression (SGPR) approximates the full model by using $M < N$ datapoints to approximate the whole dataset which reduces memory and computational complexities to $\mathcal{O}(NM)$ and $\mathcal{O}(NM^2)$ respectively. Despite these benefits, SGPR has been historically difficult to apply in practice due to numerical errors. 
+Sparse Gaussian process regression (SGPR) approximates GPR by using $M < N$ datapoints to describe the whole dataset which reduces memory and computational complexities to $\mathcal{O}(NM)$ and $\mathcal{O}(NM^2)$ respectively. Despite these benefits, SGPR has been historically difficult to apply in practice due to numerical errors. 
 
 This package aims to make SGPR easy by providing a stable implementation that nearly always runs and has been tested in more than 30 UCI datasets.  
 
@@ -47,6 +47,8 @@ This package aims to make SGPR easy by providing a stable implementation that ne
 
 
 ## Acknowledgements 
+
+The primary reference for SGPR is ["Variational Learning of Inducing Variables in Sparse Gaussian Processes" (2009) by Titsias](http://proceedings.mlr.press/v5/titsias09a/titsias09a.pdf).
 
 This library is heavily based on the work of [GPFlow](https://github.com/GPflow/GPflow) and [RobustGP](https://github.com/markvdw/RobustGP) which can be cited via
 
