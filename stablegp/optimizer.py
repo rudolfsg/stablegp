@@ -46,6 +46,7 @@ class LBFGS(Optimizer):
         max_eval=None,
         tolerance_grad=1e-7,
         tolerance_change=1e-9,
+        tolerance_relative=1e-7,
         history_size=100,
         line_search_fn=None,
         ignore_previous_state=True,
@@ -71,6 +72,13 @@ class LBFGS(Optimizer):
         self._params = self.param_groups[0]["params"]
         self._numel_cache = None
         self.ignore_previous_state = ignore_previous_state
+        self.tolerance_relative = tolerance_relative
+
+        try:
+            import tqdm 
+            self.use_tqdm = True 
+        except ImportError:
+            self.use_tqdm = False 
 
     def _numel(self):
         if self._numel_cache is None:
@@ -171,8 +179,12 @@ class LBFGS(Optimizer):
         prev_loss = state.get("prev_loss")
 
         n_iter = 0
+        itr = range(max_iter) 
+        if self.use_tqdm:
+            from tqdm import tqdm
+            itr = tqdm(itr)
         # optimize for a max of max_iter iterations
-        while n_iter < max_iter:
+        for n_iter in itr:
             # keep track of nb of iterations
             n_iter += 1
             state["n_iter"] += 1
@@ -280,26 +292,23 @@ class LBFGS(Optimizer):
                             obj_func, x_init, t, d, loss, flat_grad, gtd
                         )
                        
-                        print(
-                            f"LBFGS: iteration={n_iter} {loss=:.4E} step={t:.4E} fun evals={ls_func_evals}"
-                        )
+                        msg = f"LBFGS: iteration={n_iter} {loss=:.4E} step={t:.4E} fun evals={ls_func_evals}"
+                        if self.use_tqdm:
+                            itr.set_description(msg)
+                        else:
+                            print(msg)
                     except Exception as e:
-                        print(f"Line search warning: {e}")
+                        print(f"Line search failed: {e}")
                         loss = np.nan
 
                 if (
                     np.isnan(loss) or loss > prev_loss
                 ):  # see https://github.com/pytorch/pytorch/issues/5953
-                    msg = (
-                        "LBFGS error: NaN loss"
-                        if np.isnan(loss)
-                        else "LBFGS error: loss increased"
-                    )
 
                     if state["n_iter"] == 1:
-                        raise RuntimeError(msg)
-
-                    print(f"Resetting BFGS memory due to {msg}")
+                        raise RuntimeError(f"LBFGS error during the first iteration")
+                    else:
+                        print(f"Resetting LBFGS memory")
                     flat_grad.copy_(prev_flat_grad)
                     prev_flat_grad = None
                     loss = prev_loss
@@ -356,6 +365,10 @@ class LBFGS(Optimizer):
 
             if n_iter == max_iter:
                 termination_msg = "max iter"
+
+            if self.tolerance_relative and abs(loss - prev_loss) / max([abs(loss), abs(prev_loss), 1]) < self.tolerance_relative:
+                termination_msg = "rel tol"
+                break 
 
         state["d"] = d
         state["t"] = t

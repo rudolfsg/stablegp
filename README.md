@@ -7,7 +7,7 @@ This library implements a robust version of Sparse Variational Gaussian Process 
 ## Example
 
 ```
-pip install stablegp
+pip install git+https://github.com/rudolfsg/stablegp.git
 ```
 
 ```python
@@ -28,18 +28,18 @@ pred_mean, pred_var = model.predict_f(X)
 
 Gaussian process regression (GPR) is a model that tries to approximate the function $f(x)$ based on noisy observations $y = f(x) + \epsilon$ where $\epsilon$ is Gaussian noise. It is a powerful model since (1) it provides uncertainty estimates of each prediction (2) it's non-parametric and can fit many datasets well. However, for $N$ training observations a GP requires $\mathcal{O}(N^2)$ memory and $\mathcal{O}(N^3)$ computational complexity.
 
-Sparse Gaussian process regression (SGPR) approximates the full model by using $M < N$ datapoints to approximate the whole dataset which reduces memory and computational complexities to $\mathcal{O}(NM)$ and $\mathcal{O}(NM^2)$ respectively. Despite these benefits, SGPR can be difficult to apply in practice to due occurence of numerical errors. 
+Sparse Gaussian process regression (SGPR) approximates the full model by using $M < N$ datapoints to approximate the whole dataset which reduces memory and computational complexities to $\mathcal{O}(NM)$ and $\mathcal{O}(NM^2)$ respectively. Despite these benefits, SGPR has been historically difficult to apply in practice due to numerical errors. 
 
-This library aims to make SGPR easy by providing a stable implementation that has been tested in more than 30 UCI datasets.  
+This package aims to make SGPR easy by providing a stable implementation that nearly always runs and has been tested in more than 30 UCI datasets.  
 
 
 ## Things to be aware of 
 
-1. **Hyperparameters**: The number of inducing points `num_inducing` is the only hyperparameter that requires tuning. Using more inducing points is guaranteed to lead to a better model at the cost of higher computation time and memory usage so the optimal value depends on your goals - fast training/inference vs predictive accuracy. 
+1. **Hyperparameters**: The number of inducing points `num_inducing` is the only hyperparameter that requires tuning. Using more inducing points guarantees higher predictive accuracy at the cost of more computation and memory usage.
 
 2. **Data preprocessing**: You should standardise your data to mean 0 and unit variance e.g. via SciPy [StandardScaler](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html). This reduces the chance of numerical errors. 
 
-3. **Precision**: PyTorch uses float32 by default but GPs work best with float64 which can be enabled by adding `torch.set_default_dtype(torch.float64)` at the start of your script or by casting individual tensors, e.g. `X_train = X_train.to(torch.float64)`. Using float32 may lead to numerical instabilities and worse performance, however, float32 is still worth a try due to halved memory usage and because modern GPUs are much faster with float32. 
+3. **Precision**: PyTorch uses float32 by default but GPs work best with float64 which can be enabled by adding `torch.set_default_dtype(torch.float64)` at the start of your script or by casting individual tensors, e.g. `X_train = X_train.to(torch.float64)`. Nonetheless, float32 is worth a try - it provides good predictive accuracy in many datasets as well as much faster training on GPUs. 
 
 4. **Training**: we suggest using the training loop provided in `SGPR.fit()` since it has been tested and known to work well.
 

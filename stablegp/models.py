@@ -4,6 +4,7 @@ from torch.linalg import solve_triangular
 import torch
 from stablegp.optimizer import LBFGS
 import time 
+import numpy as np 
 
 default_jitter = 1e-10
 default_positive_minimum = 1e-5
@@ -354,7 +355,7 @@ class SGPR(torch.nn.Module):
 @torch.no_grad()
 def greedy_selection(training_inputs, M, kernel: SEKernel):
     N = training_inputs.shape[0]
-    perm = torch.randperm(N)  
+    perm = torch.tensor(np.random.permutation(N) )
     training_inputs = training_inputs[perm]
 
     indices = torch.zeros(M, dtype=torch.int) + N
