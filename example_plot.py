@@ -54,4 +54,4 @@ plot(model, title=f"After optimization: ELBO={model.elbo().item():.2f}")
 
 plt.legend()
 plt.tight_layout()
-plt.savefig('example.png')
+plt.savefig('example_plot.png')

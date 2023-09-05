@@ -2,7 +2,7 @@
 
 This library implements a robust version of Sparse Variational Gaussian Process regression (SGPR) in PyTorch.
 
-![](example.png)
+![](example_plot.png)
 
 ## Example
 
@@ -20,7 +20,7 @@ Y = torch.sin(X)
 kernel = SEKernel(num_dimensions=X.shape[1])
 model = SGPR(X, Y, kernel, num_inducing=10)
 
-model.fit()
+model.fit()  # alternatively use model.fit_automatic() which will automatically try increasing values of num_inducing
 pred_mean, pred_var = model.predict_f(X)
 ```
 
@@ -35,7 +35,7 @@ This package aims to make SGPR easy by providing a stable implementation that ne
 
 ## Things to be aware of 
 
-1. **Hyperparameters**: The number of inducing points `num_inducing` is the only hyperparameter that requires tuning. Using more inducing points guarantees higher predictive accuracy at the cost of more computation and memory usage.
+1. **Hyperparameters**: The number of inducing points `num_inducing` is the only hyperparameter that requires tuning. Using more inducing points guarantees higher predictive accuracy at the cost of more computation and memory usage. If you don't know how many inducing points to use, run `model.fit_automatic()` shown in `extended_example.py` until model accuracy is good enough. 
 
 2. **Data preprocessing**: You should standardise your data to mean 0 and unit variance e.g. via SciPy [StandardScaler](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html). This reduces the chance of numerical errors. 
 

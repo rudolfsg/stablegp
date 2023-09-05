@@ -9,6 +9,7 @@ import numpy as np
 default_jitter = 1e-10
 default_positive_minimum = 1e-5
 
+
 class _Variable:
     def __init__(self, value, lower=None, upper=None) -> None:
         self.lower = lower
@@ -138,6 +139,9 @@ class SGPR(torch.nn.Module):
         return L 
 
     def cholesky(self, A, safe=False):
+        """
+        Cholesky decomposition which uses jitter if safe=True
+        """
         if not safe:
             return self._chol(A)
         
@@ -194,9 +198,15 @@ class SGPR(torch.nn.Module):
         return -1 * bound
 
     def elbo(self):
+        """
+        Lower bound to the log marginal likelihood of the model
+        """
         return -1 * self()
 
     def upper_bound(self):
+        """
+        Upper bound to the log marginal likelihood of the model
+        """
         Kdiag = self.kernel(self.X, diag=True)
         kuu = self.kernel(self.inducing_variable, self.inducing_variable)
         kuf = self.kernel(self.inducing_variable, self.X)
@@ -229,6 +239,9 @@ class SGPR(torch.nn.Module):
         return const + logdet + quad
 
     def predict_f(self, X_test, diag=False):
+        """
+        Predict latent function value mean and variance given input locations
+        """
         err = self.Y - self.mean_function(self.X)
         kuf = self.kernel(self.inducing_variable, self.X)
         kuu = self.kernel(self.inducing_variable, self.inducing_variable)
@@ -267,6 +280,9 @@ class SGPR(torch.nn.Module):
         return mean + self.mean_function(X_test), var
 
     def predict_log_density(self, X_test, Y_test, diag=True):
+        """
+        Predicted log probability density of noisy observations y
+        """
         if not diag:
             raise NotImplementedError
         mean, var = self.predict_f(X_test, diag=diag)
@@ -278,17 +294,28 @@ class SGPR(torch.nn.Module):
         )
         return density
 
-    def fit(self, max_epochs=20, optimise_iv=True, reinit_retries=5):
+    def fit(self, max_epochs=20, optimise_iv=False, reinit_retries=5, **bfgs_kwargs):
+        """
+        Fit SGPR using greedy-variance inducing point selection. 
+        max_epochs controls how many times inducing points will be re-initialised.
+        Setting optimise_iv to True will optimise inducing variables in the final epoch.
+        """
         start_time = time.time()
-        optimizer = LBFGS(
-            [v for v in self.parameters() if v.requires_grad],
+
+        default_bfgs_options = dict(
             line_search_fn="strong_wolfe",
             history_size=10,
             lr=1,
             max_iter=25 * (self.X.shape[1] + 2),  # Iterate 25 times per hyperparam,
             max_eval=15000,
             tolerance_grad=1e-5,
-            ignore_previous_state=True
+            ignore_previous_state=True,
+            tolerance_relative=1e-7,
+        )
+
+        optimizer = LBFGS(
+            [v for v in self.parameters() if v.requires_grad],
+            **{**default_bfgs_options, **bfgs_kwargs}
         )
 
         def closure():
@@ -352,14 +379,66 @@ class SGPR(torch.nn.Module):
                 print("Terminating due to max_epochs")
         print(f"Optimization finished in {(time.time() - start_time):.1f}s")
 
+    def fit_automatic(self, num_models=5, **bfgs_kwargs):
+        """
+        Fit models automatically with increasing number of inducing points up to the size of the dataset.
+        num_models controls how many values of M to try.
+
+        This function can be interrupted via CTRL+C which will then return the model with the highest achieved ELBO so far.
+        """
+        
+        Ms = np.geomspace(self.num_inducing, self.X.shape[0], num=num_models, dtype=int)
+        Ms[0] = self.num_inducing
+        Ms[-1] = self.X.shape[0]
+
+        best_parameters = None 
+        best_elbo = None
+        continue_fitting = True 
+
+        for M in Ms:
+            print(f"-------- Fitting SGPR with {M=} inducing points --------")
+            # Reset hyperparameters
+            self.num_inducing = M
+            self.set_noise_var(0.01)
+            self.kernel.set_lengthscale(torch.ones(self.X.shape[1]))
+            self.kernel.set_signal_var(1)
+            self.inducing_variable = Parameter(
+                torch.ones((self.num_inducing, self.X.shape[1]), dtype=torch.get_default_dtype()),
+                requires_grad=False,
+            )
+            try:
+                self.fit(**bfgs_kwargs)
+            except KeyboardInterrupt:
+                continue_fitting = False 
+
+            if best_elbo is None or self.elbo() > best_elbo:
+                print(f"Model improved with {M=}")
+                best_parameters = self.state_dict()
+                best_elbo = self.elbo().item()
+            else:
+                print(f"Model did _not_ improve with {M=}")
+
+            if not continue_fitting:
+                print("Stopping model fit")
+                break 
+        
+        if best_parameters is not None:
+            self.num_inducing = best_parameters['inducing_variable'].shape[0]
+            self.inducing_variable = Parameter(
+                torch.ones((self.num_inducing, self.X.shape[1]), dtype=torch.get_default_dtype()),
+                requires_grad=False,
+            )
+            self.load_state_dict(best_parameters)
+
+
 @torch.no_grad()
 def greedy_selection(training_inputs, M, kernel: SEKernel):
     N = training_inputs.shape[0]
-    perm = torch.tensor(np.random.permutation(N) )
+    perm = torch.tensor(np.random.permutation(N))  # use numpy for permutation to maintain consistency between CPU and GPU runs
     training_inputs = training_inputs[perm]
 
     indices = torch.zeros(M, dtype=torch.int) + N
-    di = kernel(training_inputs, diag=True) + 1e-12  # jitter
+    di = kernel(training_inputs, diag=True) + 1e-12 
     indices[0] = torch.argmax(di)  
 
     if M == 1:
@@ -373,7 +452,7 @@ def greedy_selection(training_inputs, M, kernel: SEKernel):
         cj = ci[:m, j] 
         Lraw = kernel(training_inputs, new_Z)
         L = torch.round(torch.squeeze(Lraw), decimals=20)  
-        L[j] += 1e-12  # jitter
+        L[j] += 1e-12
         ei = (L - (cj.reshape(-1, 1).T @ ci[:m]).squeeze()) / dj
         ci[m, :] = ei
         di -= ei**2

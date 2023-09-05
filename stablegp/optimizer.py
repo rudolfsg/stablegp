@@ -36,6 +36,12 @@ class LBFGS(Optimizer):
             value/parameter changes (default: 1e-9).
         history_size (int): update history size (default: 100).
         line_search_fn (str): either 'strong_wolfe' or None (default: None).
+
+        tolerance_relative (float): termination relative tolerance (default: 1e-7).
+        ignore_previous_state (bool): reset Hessian approximation if optimizer instance 
+            is re-used (default: True).
+        callback (function): a function to call between L-BFGS iterations, for example,
+            for model evaluation. It must accept an iteration number argument (default: None). 
     """
 
     def __init__(
@@ -50,6 +56,7 @@ class LBFGS(Optimizer):
         history_size=100,
         line_search_fn=None,
         ignore_previous_state=True,
+        callback=None,
     ):
         if max_eval is None:
             max_eval = max_iter * 5 // 4
@@ -73,6 +80,7 @@ class LBFGS(Optimizer):
         self._numel_cache = None
         self.ignore_previous_state = ignore_previous_state
         self.tolerance_relative = tolerance_relative
+        self.callback = callback
 
         try:
             import tqdm 
@@ -308,7 +316,7 @@ class LBFGS(Optimizer):
                     if state["n_iter"] == 1:
                         raise RuntimeError(f"LBFGS error during the first iteration")
                     else:
-                        print(f"Resetting LBFGS memory")
+                        print("Resetting LBFGS memory")
                     flat_grad.copy_(prev_flat_grad)
                     prev_flat_grad = None
                     loss = prev_loss
@@ -320,6 +328,9 @@ class LBFGS(Optimizer):
 
                 self._add_grad(t, d)
                 opt_cond = flat_grad.abs().max() <= tolerance_grad
+
+                if self.callback is not None:
+                    self.callback(n_iter)
 
             else:
                 # no line search, simply move with fixed-step
