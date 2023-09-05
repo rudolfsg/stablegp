@@ -20,7 +20,7 @@ Y = torch.sin(X)
 kernel = SEKernel(num_dimensions=X.shape[1])
 model = SGPR(X, Y, kernel, num_inducing=10)
 
-model.fit()  # alternatively use model.fit_automatic() which will automatically try increasing values of num_inducing
+model.fit()  # alternatively use model.fit_automatic()
 pred_mean, pred_var = model.predict_f(X)
 ```
 
