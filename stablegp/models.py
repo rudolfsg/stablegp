@@ -475,6 +475,7 @@ class SGPR(torch.nn.Module):
 
 @torch.no_grad()
 def greedy_selection(training_inputs, M, kernel: SEKernel):
+    # From https://github.com/markvdw/RobustGP/blob/master/robustgp/init_methods/methods.py#L107
     N = training_inputs.shape[0]
     perm = torch.tensor(
         np.random.permutation(N)
