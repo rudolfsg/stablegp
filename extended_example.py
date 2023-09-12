@@ -17,13 +17,13 @@ Y = Y_noiseless + 0.7 * torch.randn(N).reshape(-1, 1)
 X_test = X
 Y_test = Y
 
-# Define initial model
+# Define the model
 kernel = SEKernel(num_dimensions=X.shape[1])
 model = SGPR(
     X,
     Y,
     kernel,
-    num_inducing=10,
+    num_inducing=10,  # this defines the initial number of inducing points to try if using fit_automatic
 )
 
 # Store model evaluation metrics through a callback
@@ -53,5 +53,5 @@ def create_callback():
     return callback
 
 
-# Fit the model
-model.fit_automatic(callback=create_callback())
+# Automatically fit 5 models with increasing number of inducing points
+model.fit_automatic(num_models=20, callback=create_callback())

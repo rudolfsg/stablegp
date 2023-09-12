@@ -458,7 +458,6 @@ class SGPR(torch.nn.Module):
                 print(f"Model did _not_ improve with {M=}")
 
             if not continue_fitting:
-                print("Stopping model fit")
                 break
 
         if best_parameters is not None:
@@ -471,6 +470,7 @@ class SGPR(torch.nn.Module):
                 requires_grad=False,
             )
             self.load_state_dict(best_parameters)
+            print(f"Returning model with M={self.num_inducing}")
 
 
 @torch.no_grad()
