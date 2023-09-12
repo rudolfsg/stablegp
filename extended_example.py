@@ -54,4 +54,4 @@ def create_callback():
 
 
 # Automatically fit 5 models with increasing number of inducing points
-model.fit_automatic(num_models=20, callback=create_callback())
+model.fit_automatic(num_models=5, callback=create_callback())
