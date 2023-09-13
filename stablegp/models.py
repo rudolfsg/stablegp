@@ -402,6 +402,10 @@ class SGPR(torch.nn.Module):
                     reinit_iv = False
                     self.inducing_variable.requires_grad = True
                     print("Optimising inducing points")
+                    optimizer = LBFGS(
+                        [v for v in self.parameters() if v.requires_grad],
+                        **{**default_bfgs_options, **bfgs_kwargs},
+                    )
                     continue
 
                 print(
